@@ -1,0 +1,93 @@
+# Contributor: flow
+# Compatible HIB
+
+pkgname=oilrush
+pkgver=1.35
+pkgverhib=1370041755
+pkgrel=2
+pkgdesc="a real-time strategy game based on group control."
+arch=('i686' 'x86_64')
+depends=('openal' 'libgl' 'qt4' 'qtwebkit')
+provides=()
+options=(!strip)
+PKGEXT=".pkg.tar"
+license=("commercial")
+url="http://oilrush-game.com/"
+source=('oilrush' 'oilrush.desktop')
+md5sums=('36d486fe33c2c2a2f954906792f23cd9'
+         'a2cd046c399aa0b651f4c5228f3565f6')
+
+_gamepkg="OilRush-${pkgver}.run"
+_gamepkg2="OilRush_${pkgver}_Linux_${pkgverhib}.run"
+
+build() {
+    cd ${srcdir}
+
+  msg "You need a full copy of this game in order to install it"
+  msg "Searching for \"${_gamepkg}\" or \"${_gamepkg2}\"\
+  in dir: $(readlink -f ${startdir})"
+  pkgpath=${startdir}
+
+  if [[ ! ( -f "${startdir}/${_gamepkg}" ) ]] && [[ ! ( -f "${startdir}/${_gamepkg2}" ) ]] ; then
+    error "Game package not found, please type absolute path to game setup package (/home/joe):"
+    read pkgpath
+    if [[ ! ( -f "${pkgpath}/${_gamepkg}" ) ]] && [[ ! ( -f "${pkgpath}/${_gamepkg2}" ) ]] ; then
+       error "Unable to find game package." && return 1
+    fi
+fi
+
+  msg "Found game package, installing..."
+  if [[ ( -f "${pkgpath}/${_gamepkg}" ) ]] ; then
+      ln -fs "${pkgpath}/${_gamepkg}" .
+      mkdir -p archive/
+      sh ${srcdir}/${_gamepkg} --tar xvf -C archive/
+  else
+      ln -fs "${pkgpath}/${_gamepkg2}" .
+      mkdir -p archive/
+      sh ${srcdir}/${_gamepkg2} --tar xvf -C archive/
+
+  fi
+
+}
+
+package() {
+    cd "${srcdir}/archive"
+    install -d ${pkgdir}/opt/${pkgname}
+
+    cp -R ${srcdir}/archive/* \
+        ${pkgdir}/opt/${pkgname}/
+
+    # Fix libQt
+    rm ${pkgdir}/opt/${pkgname}/bin/libQtCoreUnigine_{x64,x86}.so.4
+    rm ${pkgdir}/opt/${pkgname}/bin/libQtGuiUnigine_{x64,x86}.so.4
+    rm ${pkgdir}/opt/${pkgname}/bin/libQtNetworkUnigine_{x64,x86}.so.4
+    rm ${pkgdir}/opt/${pkgname}/bin/libQtWebKitUnigine_{x64,x86}.so.4
+    rm ${pkgdir}/opt/${pkgname}/bin/libQtXmlUnigine_{x64,x86}.so.4
+
+
+    if [ "$CARCH" = "x86_64" ]; then
+        sed -i s:./launcher_arch:./launcher_x64: ${srcdir}/${pkgname}
+
+        ln -s /usr/lib/libQtCore.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtCoreUnigine_x64.so.4
+        ln -s /usr/lib/libQtGui.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtGuiUnigine_x64.so.4
+        ln -s /usr/lib/libQtNetwork.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtNetworkUnigine_x64.so.4
+        ln -s /usr/lib/libQtWebKit.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtWebKitUnigine_x64.so.4
+        ln -s /usr/lib/libQtXml.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtXmlUnigine_x64.so.4
+    else
+        sed -i s:./launcher_arch:./launcher_x86: ${srcdir}/${pkgname}
+
+        ln -s /usr/lib/libQtCore.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtCoreUnigine_x86.so.4
+        ln -s /usr/lib/libQtGui.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtGuiUnigine_x86.so.4
+        ln -s /usr/lib/libQtNetwork.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtNetworkUnigine_x86.so.4
+        ln -s /usr/lib/libQtWebKit.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtWebKitUnigine_x86.so.4
+        ln -s /usr/lib/libQtXml.so.4 ${pkgdir}/opt/${pkgname}/bin/libQtXmlUnigine_x86.so.4
+    fi
+
+    # Install Launcher
+    install -D -m755 ${srcdir}/${pkgname} \
+        ${pkgdir}/usr/bin/${pkgname}
+
+    # Install Desktop
+    install -D -m644 ${srcdir}/${pkgname}.desktop \
+        ${pkgdir}/usr/share/applications/${pkgname}.desktop
+}
